@@ -1,8 +1,8 @@
 import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import { rateLimit } from "express-rate-limit";
 import env from "./config/env.js";
+import { createMcpRateLimiter } from "./http/rate-limit.js";
 import { createGitHubServer } from "./server.js";
 
 const allowedHost = env.MCP_ALLOWED_HOST;
@@ -20,15 +20,7 @@ const app = createMcpExpressApp({
 // Set TRUST_PROXY_HOPS=1 on Render.
 app.set("trust proxy", env.TRUST_PROXY_HOPS);
 
-const mcpRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 30,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: {
-    error: "Rate limit exceeded. Please retry in a minute.",
-  },
-});
+const mcpRateLimiter = createMcpRateLimiter();
 
 const handler = createMcpHandler(() => createGitHubServer());
 const nodeHandler = toNodeHandler(handler);
