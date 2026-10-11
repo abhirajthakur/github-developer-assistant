@@ -9,10 +9,12 @@ const envSchema = z.object({
 
   // Optional: public GitHub search works without a token.
   GITHUB_TOKEN: z.string().min(1).optional(),
-
   GITHUB_API_BASE_URL: z.url().default("https://api.github.com"),
 
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
+  MCP_ALLOWED_HOST: z.string().trim().min(1).optional(),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(2).default(0),
 });
 
 const env = envSchema.parse(process.env);
