@@ -47,6 +47,24 @@ export async function githubGet<Schema extends z.ZodType>(
   });
 
   if (!response.ok) {
+    const errorPayload = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as { message?: unknown } | null;
+
+    console.error("GitHub API request failed:", {
+      status: response.status,
+      message:
+        typeof errorPayload?.message === "string"
+          ? errorPayload.message
+          : "No error message returned",
+      rateLimitRemaining: response.headers.get("x-ratelimit-remaining"),
+      rateLimitReset: response.headers.get("x-ratelimit-reset"),
+      rateLimitResource: response.headers.get("x-ratelimit-resource"),
+      retryAfter: response.headers.get("retry-after"),
+      requestId: response.headers.get("x-github-request-id"),
+    });
+
     const message =
       response.status === 401
         ? "GitHub authentication failed."
