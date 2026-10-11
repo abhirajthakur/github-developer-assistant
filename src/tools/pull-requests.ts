@@ -5,7 +5,7 @@ import { githubGet } from "../services/github-client.js";
 const pullRequestSchema = z.object({
   owner: z.string().trim().min(1).max(100),
   repo: z.string().trim().min(1).max(100),
-  pullNumber: z.number().int().positive(),
+  pullNumber: z.number().int().min(1).max(2_147_483_647),
 });
 
 type PullRequestInput = z.infer<typeof pullRequestSchema>;
