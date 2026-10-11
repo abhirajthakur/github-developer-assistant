@@ -11,6 +11,18 @@ const searchRepositoriesSchema = z.object({
 
 type SearchRepositoriesInput = z.infer<typeof searchRepositoriesSchema>;
 
+export function buildRepositorySearchParams(
+  input: SearchRepositoriesInput,
+): Record<string, string> {
+  const searchTerms = [input.query, ...(input.language ? [`language:${input.language}`] : [])];
+
+  return {
+    q: searchTerms.join(" "),
+    per_page: String(input.limit),
+    ...(input.sort === "best_match" ? {} : { sort: input.sort }),
+  };
+}
+
 export const searchRepositoriesTool = {
   name: "search_repositories",
   config: {
@@ -19,13 +31,12 @@ export const searchRepositoriesTool = {
   },
   handler: async ({ query, language, limit, sort }: SearchRepositoriesInput) => {
     try {
-      const searchQuery = [query, ...(language ? [`language:${language}`] : [])].join(" ");
-
-      const params: Record<string, string> = {
-        q: searchQuery,
-        per_page: String(limit),
-        ...(sort !== "best_match" ? { sort } : {}),
-      };
+      const params = buildRepositorySearchParams({
+        query,
+        language,
+        limit,
+        sort,
+      });
 
       const data = await githubGet("/search/repositories", githubSearchResponseSchema, params);
 

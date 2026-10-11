@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { createMcpRateLimiter } from "../src/http/rate-limit.js";
+import { createMcpRateLimiter } from "../../src/http/rate-limit.js";
 
 describe("MCP rate limiter", () => {
   it("rejects requests after the configured limit", async () => {
