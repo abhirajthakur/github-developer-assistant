@@ -1,3 +1,4 @@
+import { z } from "zod";
 import env from "../config/env.js";
 
 export class GitHubApiError extends Error {
@@ -10,8 +11,26 @@ export class GitHubApiError extends Error {
   }
 }
 
-export async function githubGet<T>(path: string, params?: Record<string, string>): Promise<T> {
+export class GitHubResponseValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly issues: z.core.$ZodIssue[],
+  ) {
+    super(message);
+    this.name = "GitHubResponseValidationError";
+  }
+}
+
+export async function githubGet<Schema extends z.ZodType>(
+  path: string,
+  schema: Schema,
+  params?: Record<string, string>,
+): Promise<z.output<Schema>> {
   const url = new URL(path, `${env.GITHUB_API_BASE_URL}/`);
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    url.searchParams.set(key, value);
+  }
 
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -40,5 +59,17 @@ export async function githubGet<T>(path: string, params?: Record<string, string>
     throw new GitHubApiError(message, response.status);
   }
 
-  return (await response.json()) as T;
+  const payload = await response.json();
+  const result = schema.safeParse(payload);
+
+  if (!result.success) {
+    console.error("GitHub response failed validation:", result.error.issues);
+
+    throw new GitHubResponseValidationError(
+      "GitHub returned a response that did not match the expected schema.",
+      result.error.issues,
+    );
+  }
+
+  return result.data;
 }

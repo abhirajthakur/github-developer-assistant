@@ -1,44 +1,26 @@
 import { z } from "zod";
+import { githubSearchResponseSchema } from "../schemas/github.js";
 import { githubGet } from "../services/github-client.js";
 
-interface GitHubRepository {
-  full_name: string;
-  description: string | null;
-  html_url: string;
-  stargazers_count: number;
-  language: string | null;
-  updated_at: string;
-}
+const searchRepositoriesSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  language: z.string().trim().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(10).default(5),
+});
 
-interface GitHubSearchResponse {
-  total_count: number;
-  incomplete_results: boolean;
-  items: GitHubRepository[];
-}
+type SearchRepositoriesInput = z.infer<typeof searchRepositoriesSchema>;
 
 export const searchRepositoriesTool = {
   name: "search_repositories",
   config: {
     description: "Search GitHub repositories by keywords and optional programming language.",
-    inputSchema: {
-      query: z.string().trim().min(1).max(200),
-      language: z.string().trim().min(1).max(50).optional(),
-      limit: z.number().int().min(1).max(10).default(5),
-    },
+    inputSchema: searchRepositoriesSchema,
   },
-  handler: async ({
-    query,
-    language,
-    limit,
-  }: {
-    query: string;
-    language?: string;
-    limit: number;
-  }) => {
+  handler: async ({ query, language, limit }: SearchRepositoriesInput) => {
     try {
       const searchQuery = [query, ...(language ? [`language:${language}`] : [])].join(" ");
 
-      const data = await githubGet<GitHubSearchResponse>("/search/repositories", {
+      const data = await githubGet("/search/repositories", githubSearchResponseSchema, {
         q: searchQuery,
         per_page: String(limit),
         sort: "stars",

@@ -1,51 +1,29 @@
 import { githubGet } from "../services/github-client.js";
 import { z } from "zod";
+import { githubIssuesResponseSchema } from "../schemas/github.js";
 
-interface GitHubIssue {
-  number: number;
-  title: string;
-  html_url: string;
-  state: "open" | "closed";
-  body: string | null;
-  labels: Array<{ name: string }>;
-  user: { login: string } | null;
-  created_at: string;
-  updated_at: string;
-  comments: number;
-  pull_request?: { url: string };
-}
+const listIssuesSchema = z.object({
+  owner: z.string().trim().min(1).max(100),
+  repo: z.string().trim().min(1).max(100),
+  state: z.enum(["open", "closed", "all"]).default("open"),
+  labels: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
+  page: z.number().int().min(1).max(1000).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
+});
+
+type ListIssuesInput = z.infer<typeof listIssuesSchema>;
 
 export const listIssuesTool = {
   name: "list_issues",
   config: {
     description: "List issues in a GitHub repository, filtered by state and labels.",
-    inputSchema: {
-      owner: z.string().trim().min(1).max(100),
-      repo: z.string().trim().min(1).max(100),
-      state: z.enum(["open", "closed", "all"]).default("open"),
-      labels: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
-      page: z.number().int().min(1).max(1000).default(1),
-      perPage: z.number().int().min(1).max(100).default(10),
-    },
+    inputSchema: listIssuesSchema,
   },
-  handler: async ({
-    owner,
-    repo,
-    state,
-    labels,
-    page,
-    perPage,
-  }: {
-    owner: string;
-    repo: string;
-    state: "open" | "closed" | "all";
-    labels?: string[];
-    page: number;
-    perPage: number;
-  }) => {
+  handler: async ({ owner, repo, state, labels, page, perPage }: ListIssuesInput) => {
     try {
-      const data = await githubGet<GitHubIssue[]>(
+      const data = await githubGet(
         `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+        githubIssuesResponseSchema,
         {
           state,
           page: String(page),
